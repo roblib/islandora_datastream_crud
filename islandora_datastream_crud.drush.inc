@@ -82,6 +82,7 @@ function islandora_datastream_crud_drush_command() {
     'description' => 'Add or replace datastrems. This operation writes datastreams to objects in your repository.',
     'examples' => array(
       'drush islandora_datastream_crud_push_datastreams --user=admin --datastreams_source_directory=/tmp/imagecollection_objs',
+      'drush islandora_datastream_crud_push_datastreams --user=admin --no_derivs --datastreams_source_directory=/tmp/imagecollection_objs',
       'drush islandora_datastream_crud_push_datastreams --user=admin --datastreams_source_directory=/tmp/imagecollection_objs --pid_file=/tmp/wanted_pids.txt',
       'drush islandora_datastream_crud_push_datastreams --user=admin --datastreams_directory=/tmp/my_new_datastreams --pid_file=/tmp/pids_for_target_objects.txt --datastream_label="My new datastream" --datastream_mimetype=application/foo',
     ),
@@ -119,6 +120,10 @@ function islandora_datastream_crud_drush_command() {
       'dc_transform' => array(
         'description' => 'Optional. Absolute path to the XSLT stylesheet to use for regenerating DC from MODS or other XML datastream.',
       ),
+      'no_derivs' => array(
+        'description' => 'Optional. Turns off all derivative generation that would otherwise result from pushing datastreams.',
+        'value' => 'optional',
+      ),
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
@@ -152,11 +157,11 @@ function islandora_datastream_crud_drush_command() {
     'aliases' => array('idcrudgd'),
     'description' => 'Generate or regenerate derivative datastreams from a source DSID.',
     'examples' => array(
-      'drush islandora_datastream_crud_delete_datastreams --user=admin --dsid=FOO --pid_file=/tmp/delete_foo_from_these_objects.txt',
+      'drush islandora_datastream_crud_generate_derivatives --user=admin --source_dsid=OBJ --pid_file=/tmp/regenerate_derivatives_for_these_objects.txt',
     ),
     'options' => array(
       'pid_file' => array(
-        'description' => 'Absolute path to the file that lists PIDs for objects you want to delete datastreams from.',
+        'description' => 'Absolute path to the file that lists PIDs for objects you want to generate derivatives for.',
         'required' => TRUE,
       ),
       'source_dsid' => array(
@@ -666,6 +671,9 @@ function drush_islandora_datastream_crud_remove_bom_character() {
  * Implements hook_islandora_derivative_alter().
  */
 function islandora_datastream_crud_islandora_derivative_alter(&$derivatives, AbstractObject $object) {
+  if (drush_get_option('no_derivs', FALSE)) {
+    $derivatives = array();
+  }
   if (drush_get_option('dest_dsids', FALSE)) {
     $dsid_list = drush_get_option('dest_dsids');
     $dsid_list = rtrim($dsid_list, ',');
