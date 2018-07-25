@@ -47,7 +47,7 @@ function islandora_datastream_crud_query_solr($query) {
  * @return bool
  *   TRUE on successful saving of the content, FALSE otherwise.
  */
-function islandora_datastream_crud_retrieve_datastream($pid, $dsid, $dir) {
+function islandora_datastream_crud_retrieve_datastream($pid, $dsid, $dir, &$ds_filename = '') {
   if (!islandora_object_load($pid)) {
     drush_set_error('OBJECT_DOES_NOT_EXIST',
       dt('The specified object (!pid) does not exist or is not accessible.',
@@ -528,4 +528,10 @@ function islandora_datastream_crud_read_version_data_log($path) {
   else {
     return FALSE;
   }
+}
+
+function islandora_datastream_crud_remove_utf8_bom($text) {
+  $bom = pack('H*','EFBBBF');
+  $text = preg_replace("/^$bom/", '', $text);
+  return $text;
 }

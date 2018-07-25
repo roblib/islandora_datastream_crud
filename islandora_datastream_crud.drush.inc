@@ -179,6 +179,21 @@ function islandora_datastream_crud_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
 
+  $items['islandora_datastream_crud_remove_bom_character'] = array(
+    'description' => 'Remove Byte Order Marker from the specified datastream',
+    'options' => array(
+      'pid_file' => array(
+        'description' => 'Absolute path to the file that lists PIDs for objects to affect',
+        'required' => TRUE,
+      ),
+      'dsid' => array(
+        'description' => 'Datastream ID to remove the BOM character from',
+        'required' => TRUE,
+      ),
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+  );
+
   $items['islandora_datastream_crud_update_object_properties'] = array(
     'aliases' => array('idcrudop'),
     'description' => 'Update object properties.',
@@ -215,6 +230,7 @@ function islandora_datastream_crud_drush_command() {
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
+
 
   return $items;
 }
@@ -401,7 +417,7 @@ function drush_islandora_datastream_crud_fetch_datastreams() {
 function drush_islandora_datastream_crud_push_datastreams() {
   if (drush_get_option('datastreams_revert')) {
     if (!drush_confirm(dt("You are about to push datastreams to objects " .
-      "in your repository. This will revert old versions of the datastreams. " .
+      "in your repositoryConnection. This will revert old versions of the datastreams. " .
       "Do you want to want to continue?",
       array()))) {
       drush_user_abort(dt('Exiting, no datastreams pushed.'));
@@ -626,6 +642,26 @@ function drush_islandora_datastream_crud_update_object_properties_validate() {
   }
 }
 
+
+function drush_islandora_datastream_crud_remove_bom_character() {
+  $dir = dirname(__FILE__);
+  include_once($dir . '/includes/utilities.inc');
+  $dsid = drush_get_option('dsid');
+  $pids = islandora_datastream_crud_read_pid_file(drush_get_option('pid_file'));
+  $temp_dir = sys_get_temp_dir();
+  $temp_dir = "/tmp";
+  foreach($pids as $pid) {
+    if (islandora_datastream_crud_retrieve_datastream($pid, $dsid, $temp_dir, $ds_filename)) {
+      $temp_file_path = $temp_dir . DIRECTORY_SEPARATOR . $ds_filename;
+      $text = file_get_contents($temp_file_path);
+
+      $fixed_text = islandora_datastream_crud_remove_utf8_bom($text);
+      file_put_contents($temp_file_path, $fixed_text);
+      islandora_datastream_crud_push_datastream($temp_file_path, FALSE);
+    }
+  }
+}
+
 /**
  * Implements hook_islandora_derivative_alter().
  */
@@ -657,3 +693,4 @@ function islandora_datastream_crud_islandora_derivative_alter(&$derivatives, Abs
     }
   }
 }
+
