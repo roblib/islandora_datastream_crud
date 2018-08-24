@@ -89,7 +89,12 @@ function islandora_datastream_crud_drush_command() {
     'options' => array(
       'datastreams_source_directory' => array(
         'description' => 'Absolute path to the directory where updated datastream files are stored.',
-        'required' => TRUE,
+      ),
+      'single_datastream_id' => array(
+        'descripton' => 'Datastream ID if uploading a single file',
+      ),
+      'single_datastream_file' => array(
+        'description' => 'Absolute path to single datastream to upload to each PID, alternative to --datastreams_source_directory.',
       ),
       'pid_file' => array(
         'description' => 'Optional. Absolute path to the file that lists PIDs for objects you want to push datastreams to. If absent, all of the datastreams in the source directory will be pushed',
@@ -440,7 +445,8 @@ function drush_islandora_datastream_crud_push_datastreams() {
   }
 
   $source_directory = drush_get_option('datastreams_source_directory');
-  if (!file_exists($source_directory)) {
+  $single_datastream_file = drush_get_option('single_datastream_file');
+  if (!file_exists($source_directory) && empty($single_datastream_file)) {
     drush_set_error('DATASTREAM_SOURCE_DIRECTORY_NOT_FOUND',
     dt('The specified datastream source directory (!dir) does not exist.',
       array('!dir' => $source_directory)));
@@ -476,26 +482,39 @@ function drush_islandora_datastream_crud_push_datastreams() {
     }
   }
 
-  foreach (glob("$source_directory/*") as $filepath) {
-    if (drush_get_option('pause')) {
-      sleep(drush_get_option('pause'));
-    }
-    if (drush_get_option('pid_file')) {
-      if ($pid = islandora_datastream_crud_dsfilename_to_pid($filepath)) {
-        if (in_array($pid, $pids)) {
-          islandora_datastream_crud_push_datastream($filepath, $regenerate_dc);
+  if (empty($single_datastream_file)) {
+    foreach (glob("$source_directory/*") as $filepath) {
+      if (drush_get_option('pause')) {
+        sleep(drush_get_option('pause'));
+      }
+      if (drush_get_option('pid_file')) {
+        if ($pid = islandora_datastream_crud_dsfilename_to_pid($filepath)) {
+          if (in_array($pid, $pids)) {
+            islandora_datastream_crud_push_datastream($filepath, $regenerate_dc);
+          }
+        } else {
+          continue;
         }
-      }
-      else {
-        continue;
+      } else {
+        islandora_datastream_crud_push_datastream($filepath, $regenerate_dc);
       }
     }
-    else {
-      islandora_datastream_crud_push_datastream($filepath, $regenerate_dc);
+  }
+  else {
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    $single_datastream_id = drush_get_option('single_datastream_id');
+    if (empty($single_datastream_id)) {
+      drush_set_error("For single datastream you must specify a DSID.");
+      return FALSE;
+    }
+    foreach ($pids as $pid) {
+      if (file_exists($single_datastream_file)) {
+        islandora_datastream_crud_push_datastream($single_datastream_file, $regenerate_dc, $pid, $single_datastream_id);
+
+      }
     }
   }
 }
-
 
 /**
  * Deletes datastreams from objects.

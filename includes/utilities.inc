@@ -110,7 +110,7 @@ function islandora_datastream_crud_retrieve_datastream($pid, $dsid, $dir, &$ds_f
  * @return string|bool
  *   The PID of the object the datastream was added to, FALSE otherwise.
  */
-function islandora_datastream_crud_push_datastream($ds_path, $regenerate_dc = FALSE) {
+function islandora_datastream_crud_push_datastream($ds_path, $regenerate_dc = FALSE, $pid = FALSE, $dsid = FALSE) {
   if (drush_get_option('datastreams_revert')) {
     $version_data_path = drush_get_option('datastreams_source_directory') .
       DIRECTORY_SEPARATOR . 'version_data.log';
@@ -123,10 +123,14 @@ function islandora_datastream_crud_push_datastream($ds_path, $regenerate_dc = FA
   }
   $ds_filename = pathinfo($ds_path, PATHINFO_FILENAME);
   // Get the datastream ID from the end of the filename.
-  list($namespace, $number, $dsid) = explode('_', $ds_filename);
+  if (!$dsid) {
+    list($namespace, $number, $dsid) = explode('_', $ds_filename);
+  }
 
-  if (!$pid = islandora_datastream_crud_dsfilename_to_pid($ds_path)) {
-    return FALSE;
+  if (!$pid) {
+    if (!$pid = islandora_datastream_crud_dsfilename_to_pid($ds_path)) {
+      return FALSE;
+    }
   }
   module_load_include('inc', 'islandora', 'includes/utilities');
 
